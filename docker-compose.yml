@@ -1,0 +1,55 @@
+version: "3.8"
+
+services:
+  api-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_PATH=/data/mangahub.db
+    volumes:
+      - ./data:/data
+
+  tcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "9090:9090"
+    environment:
+      - TCP_PORT=9090
+
+  udp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "9091:9091/udp"
+    environment:
+      - UDP_PORT=9091
+
+  grpc-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "9092:9092"
+    environment:
+      - GRPC_PORT=9092
+
+  websocket-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "9093:9093"
+    environment:
+      - WS_PORT=9093
+    depends_on:
+      - api-server
+
+volumes:
+  mangahub-data:
+    driver: local

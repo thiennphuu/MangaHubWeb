@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package manga;
+
+option go_package = "mangahub/proto";
+
+// MangaRequest represents a request for manga information
+message MangaRequest {
+  string id = 1;
+}
+
+// MangaResponse represents a manga response
+message MangaResponse {
+  string id = 1;
+  string title = 2;
+  string author = 3;
+  repeated string genres = 4;
+  int32 chapters = 5;
+  string status = 6;
+  string synopsis = 7;
+}
+
+// SearchRequest represents a search request
+message SearchRequest {
+  string title = 1;
+  string author = 2;
+  repeated string genres = 3;
+  string status = 4;
+  int32 limit = 5;
+}
+
+// SearchResponse represents search results
+message SearchResponse {
+  repeated MangaResponse results = 1;
+}
+
+// UpdateProgressRequest represents a progress update
+message UpdateProgressRequest {
+  string user_id = 1;
+  string manga_id = 2;
+  int32 chapter = 3;
+}
+
+// UpdateProgressResponse represents the update response
+message UpdateProgressResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Top10Response represents top 10 rankings
+message Top10Response {
+  repeated MangaResponse rankings = 1;
+}
+
+// Empty message for requests with no parameters
+message Empty {}
+
+// MangaService defines the service
+service MangaService {
+  rpc GetManga(MangaRequest) returns (MangaResponse);
+  rpc SearchManga(SearchRequest) returns (SearchResponse);
+  rpc UpdateProgress(UpdateProgressRequest) returns (UpdateProgressResponse);
+  rpc GetTop10Manga(Empty) returns (Top10Response);
+}

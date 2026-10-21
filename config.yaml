@@ -1,0 +1,49 @@
+app:
+  name: MangaHub
+  version: 1.0.0
+  environment: development
+  jwt_secret: your-secret-key-change-in-production
+  max_users: 100
+
+database:
+  type: sqlite
+  path: data/mangahub.db
+  timeout: 30
+  max_conn: 10
+  auto_migrate: true
+
+http:
+  host: 127.0.0.1
+  port: 8080
+  read_timeout: 15
+  write_timeout: 15
+  shutdown_timeout: 10
+
+tcp:
+  host: 127.0.0.1
+  port: 9090
+  max_connections: 50
+  read_buffer_size: 1024
+  write_buffer_size: 1024
+  keep_alive: true
+  keep_alive_interval: 30
+
+udp:
+  host: 127.0.0.1
+  port: 9091
+  max_message_size: 4096
+  max_clients: 100
+  broadcast_buffer: 100
+
+grpc:
+  host: 127.0.0.1
+  port: 9092
+  max_conns: 100
+
+websocket:
+  host: 127.0.0.1
+  port: 9093
+  read_buffer_size: 1024
+  write_buffer_size: 1024
+  max_rooms: 50
+  max_clients: 500

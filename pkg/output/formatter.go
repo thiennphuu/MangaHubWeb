@@ -1,0 +1,3 @@
+package output
+
+// Output formatter
