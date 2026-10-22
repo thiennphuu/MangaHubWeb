@@ -4,19 +4,28 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"strings"
 
+	_ "github.com/jackc/pgx/v5/stdlib"
 	_ "modernc.org/sqlite"
 )
 
 // Database represents the SQLite database connection
 type Database struct {
-	DB   *sql.DB
-	Path string
+	DB         *sql.DB
+	Path       string
+	PostgreSQL bool
 }
 
 // New creates a new database connection
 func New(dbPath string) (*Database, error) {
-	db, err := sql.Open("sqlite", dbPath)
+	driver, source := "sqlite", dbPath
+	if strings.TrimSpace(dbPath) != "" &&
+		(strings.HasPrefix(dbPath, "postgres://") || strings.HasPrefix(dbPath, "postgresql://")) {
+		driver, source = "pgx", dbPath
+	}
+
+	db, err := sql.Open(driver, source)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
@@ -26,7 +35,7 @@ func New(dbPath string) (*Database, error) {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	return &Database{DB: db, Path: dbPath}, nil
+	return &Database{DB: db, Path: source, PostgreSQL: driver == "pgx"}, nil
 }
 
 // Init initializes the database schema
@@ -144,17 +153,38 @@ func (d *Database) Close() error {
 
 // Query executes a SELECT query
 func (d *Database) Query(query string, args ...interface{}) (*sql.Rows, error) {
+	query = d.bindPlaceholders(query)
 	return d.DB.Query(query, args...)
 }
 
 // QueryRow executes a SELECT query that returns a single row
 func (d *Database) QueryRow(query string, args ...interface{}) *sql.Row {
+	query = d.bindPlaceholders(query)
 	return d.DB.QueryRow(query, args...)
 }
 
 // Exec executes an INSERT, UPDATE, or DELETE query
 func (d *Database) Exec(query string, args ...interface{}) (sql.Result, error) {
+	query = d.bindPlaceholders(query)
 	return d.DB.Exec(query, args...)
+}
+
+func (d *Database) bindPlaceholders(query string) string {
+	if !d.PostgreSQL {
+		return query
+	}
+
+	var builder strings.Builder
+	argument := 1
+	for i := 0; i < len(query); i++ {
+		if query[i] == '?' {
+			builder.WriteString(fmt.Sprintf("$%d", argument))
+			argument++
+			continue
+		}
+		builder.WriteByte(query[i])
+	}
+	return builder.String()
 }
 
 // BeginTx begins a transaction

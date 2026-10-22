@@ -125,6 +125,10 @@ func LoadConfig(path string) (*Config, error) {
 	if value := os.Getenv("MANGAHUB_DATABASE_PATH"); value != "" {
 		config.Database.Path = value
 	}
+	if value := os.Getenv("SUPABASE_DB_URL"); value != "" {
+		config.Database.Path = value
+		config.Database.Type = "postgres"
+	}
 
 	return &config, nil
 }

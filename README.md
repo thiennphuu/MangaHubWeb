@@ -183,7 +183,10 @@ websocket:
   port: 9093
 ```
 
-Environment variables can override configuration values (e.g., `MANGAHUB_API_URL`, `TCP_SERVER_HOST`).
+Environment variables can override configuration values. For Render with
+Supabase, set `SUPABASE_DB_URL` to the Supabase Postgres connection string.
+When present, the API uses PostgreSQL instead of SQLite. Keep this value only
+in Render environment variables and never commit the password.
 
 ## Project Structure
 
