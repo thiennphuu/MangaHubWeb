@@ -106,7 +106,7 @@ func (d *Database) Init() error {
 		type TEXT NOT NULL,
 		manga_id TEXT,
 		message TEXT NOT NULL,
-		read BOOLEAN DEFAULT 0,
+		read BOOLEAN DEFAULT FALSE,
 		data TEXT,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY (user_id) REFERENCES users(id)
@@ -123,9 +123,9 @@ func (d *Database) Init() error {
 
 	CREATE TABLE IF NOT EXISTS notification_preferences (
 		user_id TEXT PRIMARY KEY,
-		chapter_releases BOOLEAN DEFAULT 1,
-		email_notifications BOOLEAN DEFAULT 1,
-		sound_enabled BOOLEAN DEFAULT 1,
+		chapter_releases BOOLEAN DEFAULT TRUE,
+		email_notifications BOOLEAN DEFAULT TRUE,
+		sound_enabled BOOLEAN DEFAULT TRUE,
 		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY (user_id) REFERENCES users(id)
 	);
