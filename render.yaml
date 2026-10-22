@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: mangahub-api
+    runtime: go
+    plan: starter
+    buildCommand: go build -o api-server ./cmd/api-server
+    startCommand: ./api-server
+    healthCheckPath: /health
+    envVars:
+      - key: MANGAHUB_HTTP_HOST
+        value: 0.0.0.0
+      - key: MANGAHUB_DATABASE_PATH
+        value: /var/data/mangahub.db
+      - key: MANGAHUB_CORS_ORIGINS
+        value: https://mangathienphu-src.vercel.app,https://manga-thien-phu.vercel.app,http://localhost:3000
+      - key: MANGAHUB_JWT_SECRET
+        generateValue: true
+    disk:
+      name: mangahub-data
+      mountPath: /var/data
+      sizeGB: 1

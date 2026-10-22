@@ -69,6 +69,17 @@ func (d *Database) Init() error {
 		FOREIGN KEY (manga_id) REFERENCES manga(id)
 	);
 
+	CREATE TABLE IF NOT EXISTS frontend_reading_progress (
+		user_id TEXT NOT NULL,
+		manga_id TEXT NOT NULL,
+		current_chapter INTEGER NOT NULL DEFAULT 0,
+		current_page INTEGER NOT NULL DEFAULT 0,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		PRIMARY KEY (user_id, manga_id)
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_frontend_progress_user ON frontend_reading_progress(user_id);
+
 	CREATE TABLE IF NOT EXISTS chat_messages (
 		id TEXT PRIMARY KEY,
 		user_id TEXT NOT NULL,

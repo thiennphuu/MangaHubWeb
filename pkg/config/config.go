@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"gopkg.in/yaml.v2"
 )
@@ -107,6 +108,22 @@ func LoadConfig(path string) (*Config, error) {
 	err = yaml.Unmarshal(data, &config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse config file: %w", err)
+	}
+
+	if value := os.Getenv("MANGAHUB_HTTP_HOST"); value != "" {
+		config.HTTP.Host = value
+	}
+	if value := os.Getenv("MANGAHUB_HTTP_PORT"); value != "" {
+		if parsed, err := strconv.Atoi(value); err == nil {
+			config.HTTP.Port = parsed
+		}
+	} else if value := os.Getenv("PORT"); value != "" {
+		if parsed, err := strconv.Atoi(value); err == nil {
+			config.HTTP.Port = parsed
+		}
+	}
+	if value := os.Getenv("MANGAHUB_DATABASE_PATH"); value != "" {
+		config.Database.Path = value
 	}
 
 	return &config, nil

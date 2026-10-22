@@ -39,6 +39,8 @@ func NewHandler(db *database.Database, logger *utils.Logger) *Handler {
 
 // RegisterRoutes registers all API routes
 func (h *Handler) RegisterRoutes(engine *gin.Engine) {
+	h.registerFrontendRoutes(engine)
+
 	// Auth routes
 	auth := engine.Group("/auth")
 	{
