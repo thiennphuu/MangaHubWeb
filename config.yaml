@@ -6,7 +6,8 @@ app:
   max_users: 100
 
 database:
-  type: sqlite
+  # SUPABASE_DB_URL takes priority when set; SQLite remains the local fallback.
+  type: postgres
   path: data/mangahub.db
   timeout: 30
   max_conn: 10

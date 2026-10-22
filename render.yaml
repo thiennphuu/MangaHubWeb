@@ -9,8 +9,6 @@ services:
     envVars:
       - key: MANGAHUB_HTTP_HOST
         value: 0.0.0.0
-      - key: MANGAHUB_DATABASE_PATH
-        sync: false
       - key: SUPABASE_DB_URL
         sync: false
       - key: MANGAHUB_CORS_ORIGINS
