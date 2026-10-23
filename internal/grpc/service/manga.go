@@ -29,7 +29,7 @@ func NewMangaService(db *database.Database, logger *utils.Logger) *MangaService 
 func (s *MangaService) GetManga(ctx context.Context, req *pb.MangaRequest) (*pb.MangaResponse, error) {
 	m, err := s.mangaService.GetByID(req.ID)
 	if err != nil {
-		s.logger.Error(fmt.Sprintf("failed to get manga: %v", err))
+		s.logger.Error("failed to get manga: %v", err)
 		return nil, fmt.Errorf("manga not found")
 	}
 
@@ -60,7 +60,7 @@ func (s *MangaService) SearchManga(ctx context.Context, req *pb.SearchRequest) (
 
 	results, err := s.mangaService.Search(filter)
 	if err != nil {
-		s.logger.Error(fmt.Sprintf("failed to search manga: %v", err))
+		s.logger.Error("failed to search manga: %v", err)
 		return nil, fmt.Errorf("search failed")
 	}
 
@@ -85,7 +85,7 @@ func (s *MangaService) SearchManga(ctx context.Context, req *pb.SearchRequest) (
 // UpdateProgress updates reading progress
 func (s *MangaService) UpdateProgress(ctx context.Context, req *pb.UpdateProgressRequest) (*pb.UpdateProgressResponse, error) {
 	// TODO: Implement progress update in database
-	s.logger.Info(fmt.Sprintf("Progress updated for user %s on manga %s", req.UserID, req.MangaID))
+	s.logger.Info("Progress updated for user %s on manga %s", req.UserID, req.MangaID)
 
 	return &pb.UpdateProgressResponse{
 		Success: true,
@@ -97,7 +97,7 @@ func (s *MangaService) UpdateProgress(ctx context.Context, req *pb.UpdateProgres
 func (s *MangaService) GetTop10Manga(ctx context.Context, req *pb.Empty) (*pb.Top10Response, error) {
 	mangaList, err := s.mangaService.List(10, 0)
 	if err != nil {
-		s.logger.Error(fmt.Sprintf("failed to get top manga: %v", err))
+		s.logger.Error("failed to get top manga: %v", err)
 		return nil, fmt.Errorf("failed to get manga")
 	}
 

@@ -26,6 +26,9 @@ func main() {
 		logger.Warn("failed to load config: %v, using defaults", err)
 		cfg = config.DefaultConfig()
 	}
+	if err := logger.Configure(cfg.App.Logging.Path, cfg.App.Logging.Level); err != nil {
+		logger.Warn("failed to configure file logging: %v", err)
+	}
 
 	fmt.Println("--------------------------------------------------")
 	fmt.Println("       ⛩️  MangaHub TCP Sync Server ⛩️             ")

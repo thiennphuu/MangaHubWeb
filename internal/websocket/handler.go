@@ -1,7 +1,6 @@
 package websocket
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -34,7 +33,7 @@ func HandleConnection(c *gin.Context, hub *Hub, room string) {
 
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		log.Printf("WebSocket upgrade error: %v", err)
+		hub.logger.Error("WebSocket upgrade error: %v", err)
 		return
 	}
 
@@ -45,7 +44,7 @@ func HandleConnection(c *gin.Context, hub *Hub, room string) {
 		RoomID:   room,
 	}
 
-	log.Printf("New WebSocket connection: user=%s, room=%s", username, room)
+	hub.logger.Info("New WebSocket connection: user=%s, room=%s", username, room)
 
 	// Register with hub
 	hub.Register <- client

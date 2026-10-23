@@ -50,7 +50,7 @@ func (s *Server) Start() error {
 	}
 	defer conn.Close()
 
-	s.logger.Info(fmt.Sprintf("UDP server started on port %s", s.Port))
+	s.logger.Info("UDP server started on port %s", s.Port)
 
 	// Start broadcast handler
 	go s.handleBroadcast(conn)
@@ -60,7 +60,7 @@ func (s *Server) Start() error {
 	for {
 		n, remoteAddr, err := conn.ReadFromUDP(buffer)
 		if err != nil {
-			s.logger.Error(fmt.Sprintf("Error reading from UDP: %v", err))
+			s.logger.Error("Error reading from UDP: %v", err)
 			continue
 		}
 
@@ -74,20 +74,24 @@ func (s *Server) Start() error {
 			s.mutex.Lock()
 			s.Clients[clientID] = remoteAddr
 			s.mutex.Unlock()
-			s.logger.Info(fmt.Sprintf("Client registered: %s", clientID))
+			s.logger.Info("Client registered: %s", clientID)
 
 			// Send confirmation back to client
-			conn.WriteToUDP([]byte(`{"type":"registered","message":"Successfully registered for notifications"}`), remoteAddr)
+			if _, err := conn.WriteToUDP([]byte(`{"type":"registered","message":"Successfully registered for notifications"}`), remoteAddr); err != nil {
+				s.logger.Error("Error sending registration confirmation: %v", err)
+			}
 
 		case "unregister":
 			// Unregister client
 			s.mutex.Lock()
 			delete(s.Clients, clientID)
 			s.mutex.Unlock()
-			s.logger.Info(fmt.Sprintf("Client unregistered: %s", clientID))
+			s.logger.Info("Client unregistered: %s", clientID)
 
 			// Send confirmation back to client
-			conn.WriteToUDP([]byte(`{"type":"unregistered","message":"Successfully unregistered from notifications"}`), remoteAddr)
+			if _, err := conn.WriteToUDP([]byte(`{"type":"unregistered","message":"Successfully unregistered from notifications"}`), remoteAddr); err != nil {
+				s.logger.Error("Error sending unregistration confirmation: %v", err)
+			}
 
 		default:
 			// Try to parse as notification payload
@@ -97,15 +101,15 @@ func (s *Server) Start() error {
 				s.mutex.Lock()
 				if _, exists := s.Clients[clientID]; !exists {
 					s.Clients[clientID] = remoteAddr
-					s.logger.Info(fmt.Sprintf("Client auto-registered: %s", clientID))
+					s.logger.Info("Client auto-registered: %s", clientID)
 				}
 				s.mutex.Unlock()
 
 				// Broadcast the notification
 				s.SendNotification(payload)
-				s.logger.Info(fmt.Sprintf("Notification from %s: %s", clientID, payload.Type))
+				s.logger.Info("Notification from %s: %s", clientID, payload.Type)
 			} else {
-				s.logger.Info(fmt.Sprintf("Unknown message from %s: %s", clientID, message))
+				s.logger.Info("Unknown message from %s: %s", clientID, message)
 			}
 		}
 	}
@@ -116,7 +120,7 @@ func (s *Server) handleBroadcast(conn *net.UDPConn) {
 	for notification := range s.Queue {
 		data, err := json.Marshal(notification)
 		if err != nil {
-			s.logger.Error(fmt.Sprintf("Error marshaling notification: %v", err))
+			s.logger.Error("Error marshaling notification: %v", err)
 			continue
 		}
 
@@ -124,12 +128,12 @@ func (s *Server) handleBroadcast(conn *net.UDPConn) {
 		for _, addr := range s.Clients {
 			_, err := conn.WriteToUDP(data, addr)
 			if err != nil {
-				s.logger.Error(fmt.Sprintf("Error sending notification: %v", err))
+				s.logger.Error("Error sending notification: %v", err)
 			}
 		}
 		s.mutex.RUnlock()
 
-		s.logger.Info(fmt.Sprintf("Broadcast notification: %s - %s", notification.Type, notification.Message))
+		s.logger.Info("Broadcast notification: %s - %s", notification.Type, notification.Message)
 	}
 }
 
@@ -143,7 +147,7 @@ func (s *Server) RegisterClient(clientID string, addr *net.UDPAddr) {
 	s.mutex.Lock()
 	s.Clients[clientID] = addr
 	s.mutex.Unlock()
-	s.logger.Info(fmt.Sprintf("Client registered: %s at %s", clientID, addr.String()))
+	s.logger.Info("Client registered: %s at %s", clientID, addr.String())
 }
 
 // UnregisterClient unregisters a client
@@ -151,7 +155,7 @@ func (s *Server) UnregisterClient(clientID string) {
 	s.mutex.Lock()
 	delete(s.Clients, clientID)
 	s.mutex.Unlock()
-	s.logger.Info(fmt.Sprintf("Client unregistered: %s", clientID))
+	s.logger.Info("Client unregistered: %s", clientID)
 }
 
 // GetClientCount returns the number of registered clients

@@ -97,7 +97,7 @@ func (s *Server) handleConnection(connID string, conn net.Conn) {
 		// Save progress update to database
 		if s.db != nil {
 			if err := s.saveProgressUpdate(&update); err != nil {
-				s.logger.Error(fmt.Sprintf("Error saving progress to database: %v", err))
+				s.logger.Error("Error saving progress to database: %v", err)
 				// Continue to broadcast even if database save fails
 			}
 		}
@@ -117,7 +117,9 @@ func (s *Server) handleBroadcast() {
 
 		s.mutex.RLock()
 		for _, conn := range s.Connections {
-			fmt.Fprintf(conn, "%s\n", data)
+			if _, err := fmt.Fprintf(conn, "%s\n", data); err != nil {
+				s.logger.Error("Error sending update to client: %v", err)
+			}
 		}
 		s.mutex.RUnlock()
 
@@ -186,6 +188,6 @@ func (s *Server) saveProgressUpdate(update *models.ProgressUpdate) error {
 		}
 	}
 
-	s.logger.Info(fmt.Sprintf("Saved progress to database: User %s - Manga %s - Chapter %d", update.UserID, update.MangaID, update.Chapter))
+	s.logger.Info("Saved progress to database: User %s - Manga %s - Chapter %d", update.UserID, update.MangaID, update.Chapter)
 	return nil
 }

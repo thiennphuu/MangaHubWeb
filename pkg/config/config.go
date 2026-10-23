@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"gopkg.in/yaml.v2"
 )
@@ -47,11 +48,12 @@ type DatabaseConfig struct {
 
 // HTTPConfig holds HTTP server configuration
 type HTTPConfig struct {
-	Host            string `yaml:"host"`
-	Port            int    `yaml:"port"`
-	ReadTimeout     int    `yaml:"read_timeout"`
-	WriteTimeout    int    `yaml:"write_timeout"`
-	ShutdownTimeout int    `yaml:"shutdown_timeout"`
+	Host            string   `yaml:"host"`
+	Port            int      `yaml:"port"`
+	CORSOrigins     []string `yaml:"cors_origins"`
+	ReadTimeout     int      `yaml:"read_timeout"`
+	WriteTimeout    int      `yaml:"write_timeout"`
+	ShutdownTimeout int      `yaml:"shutdown_timeout"`
 }
 
 // TCPConfig holds TCP server configuration
@@ -110,6 +112,9 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, fmt.Errorf("failed to parse config file: %w", err)
 	}
 
+	if value := os.Getenv("MANGAHUB_JWT_SECRET"); value != "" {
+		config.App.JWTSecret = value
+	}
 	if value := os.Getenv("MANGAHUB_HTTP_HOST"); value != "" {
 		config.HTTP.Host = value
 	}
@@ -129,8 +134,25 @@ func LoadConfig(path string) (*Config, error) {
 		config.Database.Path = value
 		config.Database.Type = "postgres"
 	}
+	if value := os.Getenv("MANGAHUB_CORS_ORIGINS"); value != "" {
+		config.HTTP.CORSOrigins = splitList(value)
+	}
+	if value := os.Getenv("MANGAHUB_LOG_LEVEL"); value != "" {
+		config.App.Logging.Level = value
+	}
 
 	return &config, nil
+}
+
+func splitList(value string) []string {
+	items := strings.Split(value, ",")
+	result := make([]string, 0, len(items))
+	for _, item := range items {
+		if trimmed := strings.TrimSpace(item); trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+	return result
 }
 
 // SaveConfig saves configuration to YAML file
@@ -175,8 +197,14 @@ func DefaultConfig() *Config {
 			AutoMigrate: true,
 		},
 		HTTP: HTTPConfig{
-			Host:            "0.0.0.0",
-			Port:            8080,
+			Host: "0.0.0.0",
+			Port: 8080,
+			CORSOrigins: []string{
+				"https://mangathienphu-src.vercel.app",
+				"https://manga-thien-phu.vercel.app",
+				"http://localhost:3000",
+				"http://127.0.0.1:3000",
+			},
 			ReadTimeout:     15,
 			WriteTimeout:    15,
 			ShutdownTimeout: 10,

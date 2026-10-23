@@ -23,17 +23,19 @@ type Handler struct {
 	libraryService *user.LibraryService
 	mangaService   *manga.Service
 	logger         *utils.Logger
+	logPath        string
 }
 
 // NewHandler creates a new API handler
-func NewHandler(db *database.Database, logger *utils.Logger) *Handler {
+func NewHandler(db *database.Database, logger *utils.Logger, jwtSecret, logPath string) *Handler {
 	return &Handler{
 		db:             db,
-		authService:    auth.NewAuthService("your-secret-key"),
+		authService:    auth.NewAuthService(jwtSecret),
 		userService:    user.NewService(db),
 		libraryService: user.NewLibraryService(db),
 		mangaService:   manga.NewService(db),
 		logger:         logger,
+		logPath:        logPath,
 	}
 }
 

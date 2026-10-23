@@ -1,13 +1,13 @@
 package websocket
 
 import (
-	"log"
 	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
 
 	"mangahub/pkg/models"
+	"mangahub/pkg/utils"
 )
 
 // Hub represents a WebSocket chat hub
@@ -18,16 +18,18 @@ type Hub struct {
 	Unregister chan *websocket.Conn
 	mutex      sync.RWMutex
 	done       chan bool
+	logger     *utils.Logger
 }
 
 // NewHub creates a new WebSocket hub
-func NewHub() *Hub {
+func NewHub(logger *utils.Logger) *Hub {
 	return &Hub{
 		Clients:    make(map[*websocket.Conn]*models.ChatClient),
 		Broadcast:  make(chan models.ChatMessage, 100),
 		Register:   make(chan *models.ChatClient),
 		Unregister: make(chan *websocket.Conn),
 		done:       make(chan bool),
+		logger:     logger,
 	}
 }
 
@@ -47,7 +49,7 @@ func (h *Hub) Run() {
 				}
 			}
 			h.mutex.Unlock()
-			log.Printf("Client registered: %s (%s)", client.UserID, client.Username)
+			h.logger.Info("Client registered: %s (%s)", client.UserID, client.Username)
 
 		case conn := <-h.Unregister:
 			h.mutex.Lock()
@@ -56,7 +58,7 @@ func (h *Hub) Run() {
 				conn.Close()
 			}
 			h.mutex.Unlock()
-			log.Printf("Client unregistered")
+			h.logger.Info("Client unregistered")
 
 		case message := <-h.Broadcast:
 			h.mutex.RLock()
@@ -68,7 +70,7 @@ func (h *Hub) Run() {
 				if client.RoomID == message.RoomID {
 					err := conn.WriteJSON(message)
 					if err != nil {
-						log.Printf("Error writing message: %v", err)
+						h.logger.Error("Error writing message: %v", err)
 						go func(c *websocket.Conn) {
 							h.Unregister <- c
 						}(conn)
@@ -76,7 +78,7 @@ func (h *Hub) Run() {
 				}
 			}
 			h.mutex.RUnlock()
-			log.Printf("Broadcast message from %s: %s", message.Username, message.Message)
+			h.logger.Info("Broadcast message from %s: %s", message.Username, message.Message)
 		}
 	}
 }
@@ -96,7 +98,7 @@ func (h *Hub) HandleConnection(conn *websocket.Conn, client *models.ChatClient) 
 		err := conn.ReadJSON(&msg)
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("WebSocket error: %v", err)
+				h.logger.Error("WebSocket error: %v", err)
 			}
 			return
 		}

@@ -70,7 +70,7 @@ func (cmd *Commander) Login() error {
 	}
 
 	cmd.httpClient.SetToken(resp.Token)
-	cmd.logger.Info(fmt.Sprintf("Login successful! Token expires at: %s", resp.ExpiresAt))
+	cmd.logger.Info("Login successful! Token expires at: %s", resp.ExpiresAt)
 	return nil
 }
 
@@ -91,7 +91,7 @@ func (cmd *Commander) SearchManga() error {
 		return nil
 	}
 
-	cmd.logger.Info(fmt.Sprintf("Found %d manga:", len(results.Manga)))
+	cmd.logger.Info("Found %d manga:", len(results.Manga))
 	for i, m := range results.Manga {
 		fmt.Printf("%d. %s by %s (Status: %s)\n", i+1, m.Title, m.Author, m.Status)
 	}
@@ -151,7 +151,7 @@ func (cmd *Commander) ViewLibrary() error {
 		return nil
 	}
 
-	cmd.logger.Info(fmt.Sprintf("Library entries: %d", len(lib)))
+	cmd.logger.Info("Library entries: %d", len(lib))
 	for i, p := range lib {
 		fmt.Printf("%d. Manga %s - Chapter %d (%s)\n", i+1, p.MangaID, p.CurrentChapter, p.Status)
 	}
@@ -181,7 +181,7 @@ func (cmd *Commander) UpdateProgress() error {
 	cmd.logger.Info("Progress updated successfully")
 	return nil
 }
-	
+
 // RemoveFromLibrary handles removing manga from library
 func (cmd *Commander) RemoveFromLibrary() error {
 	cmd.logger.Info("=== Remove from Library ===")
@@ -201,7 +201,7 @@ func (cmd *Commander) JoinChat() error {
 	cmd.logger.Info("=== Join Chat ===")
 
 	room, _ := cmd.prompt.String("Room name: ")
-	cmd.logger.Info(fmt.Sprintf("Joining room: %s", room))
+	cmd.logger.Info("Joining room: %s", room)
 
 	// TODO: Implement WebSocket connection
 	return nil
@@ -258,7 +258,7 @@ func (cmd *Commander) ShowNotifications() error {
 
 // ManageServer handles server management commands
 func (cmd *Commander) ManageServer(action string) error {
-	cmd.logger.Info(fmt.Sprintf("=== Server Management: %s ===", action))
+	cmd.logger.Info("=== Server Management: %s ===", action)
 
 	// TODO: Implement server control commands (start/stop/restart/status)
 	return nil
