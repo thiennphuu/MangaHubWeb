@@ -76,7 +76,7 @@ func (h *Handler) listFrontendManga(c *gin.Context) {
 	where, args := mangaFilters(search, genre, status)
 	orderBy := map[string]string{
 		"popular": "COALESCE(rating, 0) DESC, updated_at DESC",
-		"rating":  "COALESCE(rating, 0) DESC, title COLLATE NOCASE ASC",
+		"rating":  "COALESCE(rating, 0) DESC, LOWER(title) ASC",
 		"newest":  "created_at DESC",
 		"updated": "updated_at DESC",
 	}[sortBy]
@@ -87,7 +87,7 @@ func (h *Handler) listFrontendManga(c *gin.Context) {
 		frontendError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Unable to search manga.")
 		return
 	}
-	rows, err := h.db.Query(`SELECT id, title, description, genres, chapters, cover_url, rating
+	rows, err := h.db.Query(`SELECT id, title, description, genres, total_chapters, cover_url, rating
 		FROM manga `+where+` ORDER BY `+orderBy+` LIMIT ? OFFSET ?`,
 		append(args, limit, (page-1)*limit)...)
 	if err != nil {
@@ -107,8 +107,8 @@ func (h *Handler) listFrontendManga(c *gin.Context) {
 }
 
 func (h *Handler) getFrontendFeatured(c *gin.Context) {
-	rows, err := h.db.Query(`SELECT id, title, description, genres, chapters, cover_url, rating
-		FROM manga WHERE is_featured = 1 ORDER BY updated_at DESC LIMIT 1`)
+	rows, err := h.db.Query(`SELECT id, title, description, genres, total_chapters, cover_url, rating
+		FROM manga WHERE is_featured = True ORDER BY updated_at DESC LIMIT 1`)
 	if err != nil {
 		h.logger.Error("failed to get featured manga: %v", err)
 		frontendError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Unable to load featured manga.")
@@ -206,8 +206,8 @@ func (h *Handler) getFrontendActivity(c *gin.Context) {
 	var activity struct {
 		Chapters, Minutes, Completed int
 	}
-	if err := h.db.QueryRow(`SELECT COALESCE(SUM(chapter), 0), COALESCE(SUM(minutes), 0)
-		FROM reading_activity WHERE user_id = ? AND created_at >= ?`, userID, start).Scan(&activity.Chapters, &activity.Minutes); err != nil {
+	if err := h.db.QueryRow(`SELECT COALESCE(SUM(chapter_number), 0), COALESCE(SUM(duration_minutes), 0)
+		FROM reading_activity WHERE user_id = ? AND read_at >= ?`, userID, start).Scan(&activity.Chapters, &activity.Minutes); err != nil {
 		frontendError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Unable to load reading activity.")
 		return
 	}
@@ -217,8 +217,8 @@ func (h *Handler) getFrontendActivity(c *gin.Context) {
 		return
 	}
 	var streak int
-	if err := h.db.QueryRow(`SELECT COUNT(DISTINCT SUBSTRING(CAST(created_at AS TEXT), 1, 10)) FROM reading_activity
-		WHERE user_id = ? AND created_at >= ?`, userID, time.Now().UTC().AddDate(0, 0, -30)); err != nil {
+	if err := h.db.QueryRow(`SELECT COUNT(DISTINCT SUBSTRING(CAST(read_at AS TEXT), 1, 10)) FROM reading_activity
+		WHERE user_id::text = ? AND read_at >= ?`, userID, time.Now().UTC().AddDate(0, 0, -30)).Scan(&streak); err != nil {
 		frontendError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Unable to load reading streak.")
 		return
 	}
@@ -234,7 +234,7 @@ func (h *Handler) saveFrontendProgress(c *gin.Context) {
 		return
 	}
 	var totalChapters int
-	if err := h.db.QueryRow("SELECT chapters FROM manga WHERE id = ?", request.MangaID).Scan(&totalChapters); err == sql.ErrNoRows {
+	if err := h.db.QueryRow("SELECT total_chapters FROM manga WHERE id = ?", request.MangaID).Scan(&totalChapters); err == sql.ErrNoRows {
 		frontendError(c, http.StatusNotFound, "MANGA_NOT_FOUND", "Manga does not exist.")
 		return
 	} else if err != nil {
@@ -265,8 +265,9 @@ func (h *Handler) saveFrontendProgress(c *gin.Context) {
 			userID, request.MangaID, request.CurrentChapter, now)
 	}
 	if err == nil {
-		_, err = tx.Exec(`INSERT INTO reading_activity (user_id, manga_id, chapter, minutes, created_at)
-			VALUES (?, ?, ?, 0, ?)`, userID, request.MangaID, request.CurrentChapter, now)
+		_, err = tx.Exec(`INSERT INTO reading_activity
+			(user_id, manga_id, chapter_number, pages_read, duration_minutes, read_at, created_at)
+			VALUES (?, ?, ?, ?, 0, ?, ?)`, userID, request.MangaID, request.CurrentChapter, request.CurrentPage, now, now)
 	}
 	if err != nil || tx.Commit() != nil {
 		frontendError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Unable to save reading progress.")
@@ -276,7 +277,7 @@ func (h *Handler) saveFrontendProgress(c *gin.Context) {
 		CurrentPage: request.CurrentPage, ProgressPercent: request.ProgressPercent, LastReadAt: now.Format(time.RFC3339Nano)})
 }
 
-const frontendLibraryQuery = `SELECT m.id, m.title, m.description, m.genres, m.chapters, m.cover_url, m.rating,
+const frontendLibraryQuery = `SELECT m.id, m.title, m.description, m.genres, m.total_chapters, m.cover_url, m.rating,
 		REPLACE(COALESCE(p.status, 'plan_to_read'), '-', '_'), COALESCE(fp.current_chapter, p.current_chapter, 0),
 	COALESCE(fp.current_page, 1), COALESCE(fp.progress_percent, 0), COALESCE(fp.updated_at, p.updated_at)
 		FROM user_progress p JOIN manga m ON m.id = p.manga_id

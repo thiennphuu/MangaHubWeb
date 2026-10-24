@@ -95,6 +95,10 @@ func (d *Database) Init() error {
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		user_id TEXT NOT NULL,
 		manga_id TEXT NOT NULL,
+		chapter_number INTEGER NOT NULL DEFAULT 0,
+		pages_read INTEGER NOT NULL DEFAULT 0,
+		duration_minutes INTEGER NOT NULL DEFAULT 0,
+		read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		chapter INTEGER NOT NULL,
 		minutes INTEGER NOT NULL DEFAULT 0,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -167,8 +171,29 @@ func (d *Database) Init() error {
 	if err := d.ensureFrontendProgressPercentColumn(); err != nil {
 		return err
 	}
+	if err := d.ensureReadingActivityColumns(); err != nil {
+		return err
+	}
 	if err := d.ensurePostgresSchema(); err != nil {
 		return err
+	}
+
+	func (d *Database) ensureReadingActivityColumns() error {
+		if d.Driver == "postgres" {
+			return nil
+		}
+		statements := []string{
+			"ALTER TABLE reading_activity ADD COLUMN chapter_number INTEGER NOT NULL DEFAULT 0",
+			"ALTER TABLE reading_activity ADD COLUMN pages_read INTEGER NOT NULL DEFAULT 0",
+			"ALTER TABLE reading_activity ADD COLUMN duration_minutes INTEGER NOT NULL DEFAULT 0",
+			"ALTER TABLE reading_activity ADD COLUMN read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+		}
+		for _, statement := range statements {
+			if _, err := d.DB.Exec(statement); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
+				return fmt.Errorf("failed to migrate reading activity schema: %w", err)
+			}
+		}
+		return nil
 	}
 
 	log.Println("Database schema initialized successfully")
@@ -185,9 +210,8 @@ func (d *Database) ensurePostgresSchema() error {
 	}
 
 	statements := []string{
+		"ALTER TABLE reading_activity ALTER COLUMN user_id TYPE TEXT USING user_id::text",
 		"ALTER TABLE reading_activity ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
-		"ALTER TABLE reading_activity ADD COLUMN IF NOT EXISTS chapter INTEGER NOT NULL DEFAULT 0",
-		"ALTER TABLE reading_activity ADD COLUMN IF NOT EXISTS minutes INTEGER NOT NULL DEFAULT 0",
 		"CREATE INDEX IF NOT EXISTS idx_reading_activity_user_date ON reading_activity(user_id, created_at)",
 	}
 	for _, statement := range statements {
@@ -242,6 +266,9 @@ func (d *Database) ensureMangaFrontendColumns() error {
 
 func (d *Database) ensureFrontendProgressPercentColumn() error {
 	if d.Driver == "postgres" {
+		if _, err := d.DB.Exec("ALTER TABLE frontend_reading_progress ADD COLUMN IF NOT EXISTS progress_percent NUMERIC NOT NULL DEFAULT 0"); err != nil {
+			return fmt.Errorf("failed to add frontend progress percentage: %w", err)
+		}
 		return nil
 	}
 	rows, err := d.DB.Query("PRAGMA table_info(frontend_reading_progress)")
