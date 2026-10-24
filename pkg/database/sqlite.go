@@ -102,8 +102,6 @@ func (d *Database) Init() error {
 		FOREIGN KEY (manga_id) REFERENCES manga(id)
 	);
 
-	CREATE INDEX IF NOT EXISTS idx_reading_activity_user_date ON reading_activity(user_id, created_at);
-
 	CREATE TABLE IF NOT EXISTS chat_messages (
 		id TEXT PRIMARY KEY,
 		user_id TEXT NOT NULL,
@@ -169,8 +167,34 @@ func (d *Database) Init() error {
 	if err := d.ensureFrontendProgressPercentColumn(); err != nil {
 		return err
 	}
+	if err := d.ensurePostgresSchema(); err != nil {
+		return err
+	}
 
 	log.Println("Database schema initialized successfully")
+	return nil
+}
+
+func (d *Database) ensurePostgresSchema() error {
+	if d.Driver != "postgres" {
+		_, err := d.DB.Exec("CREATE INDEX IF NOT EXISTS idx_reading_activity_user_date ON reading_activity(user_id, created_at)")
+		if err != nil {
+			return fmt.Errorf("failed to create reading activity index: %w", err)
+		}
+		return nil
+	}
+
+	statements := []string{
+		"ALTER TABLE reading_activity ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+		"ALTER TABLE reading_activity ADD COLUMN IF NOT EXISTS chapter INTEGER NOT NULL DEFAULT 0",
+		"ALTER TABLE reading_activity ADD COLUMN IF NOT EXISTS minutes INTEGER NOT NULL DEFAULT 0",
+		"CREATE INDEX IF NOT EXISTS idx_reading_activity_user_date ON reading_activity(user_id, created_at)",
+	}
+	for _, statement := range statements {
+		if _, err := d.DB.Exec(statement); err != nil {
+			return fmt.Errorf("failed to migrate PostgreSQL schema: %w", err)
+		}
+	}
 	return nil
 }
 
