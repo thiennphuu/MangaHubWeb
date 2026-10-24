@@ -178,25 +178,25 @@ func (d *Database) Init() error {
 		return err
 	}
 
-	func (d *Database) ensureReadingActivityColumns() error {
-		if d.Driver == "postgres" {
-			return nil
-		}
-		statements := []string{
-			"ALTER TABLE reading_activity ADD COLUMN chapter_number INTEGER NOT NULL DEFAULT 0",
-			"ALTER TABLE reading_activity ADD COLUMN pages_read INTEGER NOT NULL DEFAULT 0",
-			"ALTER TABLE reading_activity ADD COLUMN duration_minutes INTEGER NOT NULL DEFAULT 0",
-			"ALTER TABLE reading_activity ADD COLUMN read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
-		}
-		for _, statement := range statements {
-			if _, err := d.DB.Exec(statement); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
-				return fmt.Errorf("failed to migrate reading activity schema: %w", err)
-			}
-		}
+	log.Println("Database schema initialized successfully")
+	return nil
+}
+
+func (d *Database) ensureReadingActivityColumns() error {
+	if d.Driver == "postgres" {
 		return nil
 	}
-
-	log.Println("Database schema initialized successfully")
+	statements := []string{
+		"ALTER TABLE reading_activity ADD COLUMN chapter_number INTEGER NOT NULL DEFAULT 0",
+		"ALTER TABLE reading_activity ADD COLUMN pages_read INTEGER NOT NULL DEFAULT 0",
+		"ALTER TABLE reading_activity ADD COLUMN duration_minutes INTEGER NOT NULL DEFAULT 0",
+		"ALTER TABLE reading_activity ADD COLUMN read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+	}
+	for _, statement := range statements {
+		if _, err := d.DB.Exec(statement); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
+			return fmt.Errorf("failed to migrate reading activity schema: %w", err)
+		}
+	}
 	return nil
 }
 
