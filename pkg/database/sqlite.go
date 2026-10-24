@@ -210,7 +210,6 @@ func (d *Database) ensurePostgresSchema() error {
 	}
 
 	statements := []string{
-		"ALTER TABLE reading_activity ALTER COLUMN user_id TYPE TEXT USING user_id::text",
 		"ALTER TABLE reading_activity ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
 		"CREATE INDEX IF NOT EXISTS idx_reading_activity_user_date ON reading_activity(user_id, created_at)",
 	}
