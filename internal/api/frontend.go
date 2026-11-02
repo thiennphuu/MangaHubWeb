@@ -322,7 +322,7 @@ func scanFrontendManga(rows *sql.Rows) ([]frontendManga, error) {
 	defer rows.Close()
 	items := make([]frontendManga, 0)
 	for rows.Next() {
-		var item frontendManga
+		item := frontendManga{Genres: make([]string, 0)}
 		var description, genres, coverURL sql.NullString
 		var rating sql.NullFloat64
 		if err := rows.Scan(&item.ID, &item.Title, &description, &genres, &item.TotalChapters, &coverURL, &rating); err != nil {
