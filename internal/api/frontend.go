@@ -203,11 +203,15 @@ func (h *Handler) getFrontendLibrary(c *gin.Context) {
 func (h *Handler) getFrontendActivity(c *gin.Context) {
 	userID := frontendAuthenticatedUser(c)
 	start := time.Now().UTC().Truncate(24*time.Hour).AddDate(0, 0, -6)
+	activityUserFilter := "user_id = ?"
+	if h.db.Driver == "postgres" {
+		activityUserFilter = "user_id::text = ?"
+	}
 	var activity struct {
 		Chapters, Minutes, Completed int
 	}
 	if err := h.db.QueryRow(`SELECT COALESCE(SUM(chapter_number), 0), COALESCE(SUM(duration_minutes), 0)
-		FROM reading_activity WHERE user_id = ? AND read_at >= ?`, userID, start).Scan(&activity.Chapters, &activity.Minutes); err != nil {
+		FROM reading_activity WHERE `+activityUserFilter+` AND read_at >= ?`, userID, start).Scan(&activity.Chapters, &activity.Minutes); err != nil {
 		frontendError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Unable to load reading activity.")
 		return
 	}
@@ -217,8 +221,12 @@ func (h *Handler) getFrontendActivity(c *gin.Context) {
 		return
 	}
 	var streak int
-	if err := h.db.QueryRow(`SELECT COUNT(DISTINCT SUBSTRING(CAST(read_at AS TEXT), 1, 10)) FROM reading_activity
-		WHERE user_id::text = ? AND read_at >= ?`, userID, time.Now().UTC().AddDate(0, 0, -30)).Scan(&streak); err != nil {
+	streakDate := "SUBSTRING(CAST(read_at AS TEXT), 1, 10)"
+	if h.db.Driver == "sqlite" {
+		streakDate = "date(read_at)"
+	}
+	if err := h.db.QueryRow(`SELECT COUNT(DISTINCT `+streakDate+`) FROM reading_activity
+		WHERE `+activityUserFilter+` AND read_at >= ?`, userID, time.Now().UTC().AddDate(0, 0, -30)).Scan(&streak); err != nil {
 		frontendError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Unable to load reading streak.")
 		return
 	}
@@ -267,14 +275,23 @@ func (h *Handler) saveFrontendProgress(c *gin.Context) {
 	if err == nil {
 		_, err = tx.Exec(`INSERT INTO reading_activity
 			(user_id, manga_id, chapter_number, pages_read, duration_minutes, read_at, created_at)
-			VALUES (?, ?, ?, ?, 0, ?, ?)`, userID, request.MangaID, request.CurrentChapter, request.CurrentPage, now, now)
+			VALUES (`+h.databaseUserIDExpression()+`, ?, ?, ?, 0, ?, ?)`,
+			userID, request.MangaID, request.CurrentChapter, request.CurrentPage, now, now)
 	}
+
 	if err != nil || tx.Commit() != nil {
 		frontendError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Unable to save reading progress.")
 		return
 	}
 	c.JSON(http.StatusOK, frontendProgress{MangaID: request.MangaID, CurrentChapter: request.CurrentChapter,
 		CurrentPage: request.CurrentPage, ProgressPercent: request.ProgressPercent, LastReadAt: now.Format(time.RFC3339Nano)})
+}
+
+func (h *Handler) databaseUserIDExpression() string {
+	if h.db.Driver == "postgres" {
+		return "CAST(? AS uuid)"
+	}
+	return "?"
 }
 
 const frontendLibraryQuery = `SELECT m.id, m.title, m.description, m.genres, m.total_chapters, m.cover_url, m.rating,
