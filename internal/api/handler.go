@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"mangahub/internal/auth"
 	"mangahub/internal/manga"
@@ -126,6 +127,10 @@ func (h *Handler) Register(c *gin.Context) {
 		c.JSON(http.StatusConflict, gin.H{"error": "username already exists"})
 		return
 	}
+	if _, err := h.userService.GetByEmail(req.Email); err == nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "email already exists"})
+		return
+	}
 
 	// Hash password
 	hashedPassword, err := h.authService.HashPassword(req.Password)
@@ -143,6 +148,11 @@ func (h *Handler) Register(c *gin.Context) {
 	}
 
 	if err := h.userService.Create(user); err != nil {
+		if strings.Contains(err.Error(), "duplicate key value") ||
+			strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			c.JSON(http.StatusConflict, gin.H{"error": "username or email already exists"})
+			return
+		}
 		h.logger.Error("failed to create user: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user"})
 		return
@@ -160,7 +170,14 @@ func (h *Handler) Login(c *gin.Context) {
 	}
 
 	// Get user
-	user, err := h.userService.GetByUsername(req.Username)
+	lookup := req.Username
+	if lookup == "" {
+		lookup = req.Email
+	}
+	user, err := h.userService.GetByUsername(lookup)
+	if err != nil && req.Email != "" {
+		user, err = h.userService.GetByEmail(req.Email)
+	}
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
 		return
